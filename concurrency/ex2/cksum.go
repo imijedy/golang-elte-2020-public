@@ -12,13 +12,25 @@ import (
 
 func main() {
 	// TODO: parallelize the checksum calculation
+	type HashStruct struct {
+		hash []byte
+		path string
+		err  error
+	}
+	channel := make(chan HashStruct)
 	for _, path := range Files() {
-		hash, err := Hash(path)
-		if err != nil {
-			fmt.Printf("ERROR: %s\n", err)
-			continue
+		go func(path string) {
+			hash, err := Hash(path)
+			channel <- HashStruct{hash: hash, path: path, err: err}
+		}(path)
+	}
+	for range Files() {
+		item := <-channel
+		if item.err != nil {
+			fmt.Printf("ERROR: %s\n", item.err)
+		} else {
+			fmt.Printf("%x\t%s\n", item.hash, item.path)
 		}
-		fmt.Printf("%x\t%s\n", hash, path)
 	}
 	// END OMIT
 }
